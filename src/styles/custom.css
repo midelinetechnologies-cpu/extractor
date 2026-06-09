@@ -1,0 +1,132 @@
+/* ── Base ─────────────────────────────── */
+.stApp {
+    background-color: #0d1421;
+}
+
+/* ── Cards ───────────────────────────── */
+.card {
+    background: #1a2332;
+    border: 1px solid #2d3748;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+}
+
+/* ── Header ──────────────────────────── */
+.header-card {
+    background: linear-gradient(135deg, #1a2332 0%, #162030 100%);
+    border: 1px solid #2d3748;
+    border-radius: 12px;
+    padding: 36px 24px 28px;
+    margin-bottom: 28px;
+    text-align: center;
+}
+.header-card h1 {
+    color: #e2e8f0;
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.header-card p {
+    color: #94a3b8;
+    font-size: 1rem;
+    margin: 0;
+}
+
+/* ── Counter badge ───────────────────── */
+.counter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(77, 139, 245, 0.1);
+    border: 1px solid #4d8bf5;
+    border-radius: 20px;
+    padding: 6px 16px;
+    color: #4d8bf5;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+/* ── Empty state ─────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #64748b;
+}
+.empty-state .icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+}
+
+/* ── Streamlit element overrides ─────── */
+[data-testid="stTextArea"] textarea,
+[data-testid="stTextInput"] input {
+    background-color: #0d1421 !important;
+    border: 1px solid #2d3748 !important;
+    color: #e2e8f0 !important;
+    border-radius: 8px !important;
+}
+[data-testid="stTextArea"] textarea:focus,
+[data-testid="stTextInput"] input:focus {
+    border-color: #4d8bf5 !important;
+    box-shadow: 0 0 0 1px #4d8bf5 !important;
+}
+
+[data-testid="stSelectbox"] > div > div {
+    background-color: #0d1421 !important;
+    border: 1px solid #2d3748 !important;
+    color: #e2e8f0 !important;
+    border-radius: 8px !important;
+}
+
+/* Primary button */
+.stButton button[kind="primary"],
+.stButton button[data-testid="baseButton-primary"] {
+    background: linear-gradient(135deg, #4d8bf5, #3b6fd4) !important;
+    border: none !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: opacity .2s !important;
+}
+.stButton button[kind="primary"]:hover {
+    opacity: 0.9 !important;
+}
+
+/* Secondary / clear button */
+.stButton button[kind="secondary"],
+.stButton button[data-testid="baseButton-secondary"] {
+    background: transparent !important;
+    border: 1px solid #ef4444 !important;
+    color: #ef4444 !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}
+.stButton button[kind="secondary"]:hover {
+    background: rgba(239,68,68,.08) !important;
+}
+
+/* Download button */
+.stDownloadButton button {
+    background: transparent !important;
+    border: 1px solid #10b981 !important;
+    color: #10b981 !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    width: 100% !important;
+}
+.stDownloadButton button:hover {
+    background: rgba(16,185,129,.08) !important;
+}
+
+/* Tabs */
+[data-testid="stTabs"] [data-baseweb="tab"] {
+    color: #94a3b8;
+}
+[data-testid="stTabs"] [aria-selected="true"] {
+    color: #4d8bf5 !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-border"] {
+    background: #4d8bf5 !important;
+}
