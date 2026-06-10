@@ -35,9 +35,6 @@ def _do_extract() -> None:
 
 
 def render_input_section() -> None:
-    if "remove_duplicates" not in st.session_state:
-        st.session_state.remove_duplicates = True
-
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("#### 📝 Input Text")
     st.text_area(
@@ -62,5 +59,5 @@ def render_input_section() -> None:
     with col_clear:
         st.button("🗑️  Clear", on_click=clear_all, use_container_width=True)
     with col_dedup:
-        st.checkbox("Remove duplicates", key="remove_duplicates")
+        st.checkbox("Remove duplicates", key="remove_duplicates", value=True)
     st.markdown("</div>", unsafe_allow_html=True)
