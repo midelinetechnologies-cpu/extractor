@@ -1,5 +1,4 @@
 import re
-import streamlit as st
 from src.utils.constants import EMAIL_REGEX, URL_REGEX, PHONE_REGEX, VALID_TLDS
 
 _NAME_PATTERN = re.compile(r'\b([A-Z][a-z]{1,15}(?:\s[A-Z][a-z]{1,15}){1,2})\b')
@@ -60,19 +59,6 @@ def get_extractor() -> "Extractor":
     return Extractor()
 
 
-@st.cache_resource
-def _load_nlp():
-    try:
-        import spacy  # noqa: PLC0415
-        return spacy.load("en_core_web_sm")
-    except (ImportError, OSError):
-        return None
-
-
-def nlp_available() -> bool:
-    return _load_nlp() is not None
-
-
 class Extractor:
     def __init__(self) -> None:
         self._email_re = re.compile(EMAIL_REGEX, re.IGNORECASE)
@@ -111,30 +97,7 @@ class Extractor:
         return found
 
     def extract_names(self, text: str, dedupe: bool = True) -> list[str]:
-        # Step 1: heuristic (always runs, no external deps)
-        seen: set[str] = set()
-        results = extract_names_heuristic(text)
-        seen.update(results)
+        return extract_names_heuristic(text)
 
-        # Step 2: supplement with spaCy PERSON entities if available
-        nlp = _load_nlp()
-        if nlp is not None:
-            doc = nlp(text)
-            for ent in doc.ents:
-                if ent.label_ == "PERSON":
-                    name = ent.text.strip()
-                    if name not in seen:
-                        seen.add(name)
-                        results.append(name)
-
-        return results
-
-    def extract_orgs(self, text: str, dedupe: bool = True) -> list[str]:
-        nlp = _load_nlp()
-        if nlp is None:
-            return []
-        doc = nlp(text)
-        found = [ent.text.strip() for ent in doc.ents if ent.label_ == "ORG"]
-        if dedupe:
-            found = list(dict.fromkeys(found))
-        return found
+    def extract_orgs(self, *_) -> list[str]:
+        return []
