@@ -1,55 +1,61 @@
-import streamlit as st
-import pymysql
-import pymysql.cursors
+import os
+from dotenv import load_dotenv
+import psycopg2
+
+load_dotenv()
+import psycopg2.extras
 
 
-def _conn() -> pymysql.connections.Connection:
-    cfg = st.secrets["mysql"]
-    return pymysql.connect(
-        host=cfg["host"],
-        port=int(cfg.get("port", 3306)),
-        user=cfg["user"],
-        password=cfg["password"],
-        database=cfg["database"],
-        charset="utf8mb4",
-        cursorclass=pymysql.cursors.DictCursor,
+def _conn() -> psycopg2.extensions.connection:
+    return psycopg2.connect(
+        os.environ["DATABASE_URL"],
+        cursor_factory=psycopg2.extras.RealDictCursor,
         connect_timeout=10,
+        sslmode="require",
     )
 
 
-def _ensure_table(cur: pymysql.cursors.DictCursor) -> None:
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS extracted_contacts (
-            id         INT AUTO_INCREMENT PRIMARY KEY,
-            name       VARCHAR(255)  DEFAULT '',
-            email      VARCHAR(320)  DEFAULT '',
-            phone      VARCHAR(50)   DEFAULT '',
-            url        VARCHAR(2048) DEFAULT '',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    """)
+def _ensure_table() -> None:
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS extracted_data (
+                    id         SERIAL PRIMARY KEY,
+                    name       TEXT        NOT NULL DEFAULT '',
+                    emails     TEXT[]      NOT NULL DEFAULT '{}',
+                    phones     TEXT[]      NOT NULL DEFAULT '{}',
+                    urls       TEXT[]      NOT NULL DEFAULT '{}',
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+            """)
+        conn.commit()
+
+
+def _split(value: str) -> list[str]:
+    return [v.strip() for v in value.split(",") if v.strip()]
 
 
 def push_entity_map(rows: list[dict]) -> int:
-    """Insert entity-map rows into extracted_contacts. Returns number of rows inserted."""
     if not rows:
         return 0
+
+    _ensure_table()
 
     records = [
         (
             r.get("Name", ""),
-            r.get("Emails", ""),
-            r.get("Phones", ""),
-            r.get("URLs", ""),
+            _split(r.get("Emails", "")),
+            _split(r.get("Phones", "")),
+            _split(r.get("URLs", "")),
         )
         for r in rows
     ]
 
     with _conn() as conn:
         with conn.cursor() as cur:
-            _ensure_table(cur)
-            cur.executemany(
-                "INSERT INTO extracted_contacts (name, email, phone, url) VALUES (%s, %s, %s, %s)",
+            psycopg2.extras.execute_values(
+                cur,
+                "INSERT INTO extracted_data (name, emails, phones, urls) VALUES %s",
                 records,
             )
         conn.commit()

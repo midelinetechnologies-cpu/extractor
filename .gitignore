@@ -17,6 +17,9 @@ ENV/
 # Streamlit
 .streamlit/secrets.toml
 
+# Environment
+.env
+
 # Testing
 .pytest_cache/
 .coverage

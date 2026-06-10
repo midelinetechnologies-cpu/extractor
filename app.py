@@ -1,4 +1,14 @@
+import threading
 import streamlit as st
+
+
+def _start_api() -> None:
+    import uvicorn
+    from api import app as fastapi_app
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=8000, log_level="warning")
+
+
+threading.Thread(target=_start_api, daemon=True).start()
 
 st.set_page_config(
     page_title="Email Extractor Pro",

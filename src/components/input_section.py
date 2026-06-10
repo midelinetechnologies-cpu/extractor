@@ -3,6 +3,7 @@ from src.core.extractor import get_extractor
 from src.core.mapper import build_entity_map
 from src.utils.session_state import clear_all
 from src.utils.logger import log_call
+from src.utils.db import push_entity_map
 
 
 def _request_extract() -> None:
@@ -39,6 +40,11 @@ def _run_extract() -> None:
     st.session_state.has_extracted = True
     st.session_state.filter_query = ""
     st.session_state._pending_extract = False
+
+    try:
+        push_entity_map(st.session_state.entity_map)
+    except Exception as e:
+        st.warning(f"Data saved locally but DB insert failed: {e}")
 
 
 def render_input_section() -> None:

@@ -148,6 +148,7 @@ def _render_entity_map() -> None:
     )
 
 
+
 def _nlp_warning() -> None:
     st.warning(
         "spaCy model not found. Run: `python -m spacy download en_core_web_sm`",
