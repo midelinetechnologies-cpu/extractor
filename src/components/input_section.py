@@ -9,7 +9,6 @@ def _do_extract() -> None:
     text: str = st.session_state.input_text
     dedupe: bool = st.session_state.remove_duplicates
     etype: str = st.session_state.extraction_type
-
     st.session_state.emails = (
         extractor.extract_emails(text, dedupe) if etype in ("Emails", "All") else []
     )
@@ -36,9 +35,11 @@ def _do_extract() -> None:
 
 
 def render_input_section() -> None:
+    if "remove_duplicates" not in st.session_state:
+        st.session_state.remove_duplicates = True
+
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("#### 📝 Input Text")
-
     st.text_area(
         label="Paste text",
         label_visibility="collapsed",
@@ -49,9 +50,7 @@ def render_input_section() -> None:
             "Emails, URLs, and phone numbers will be detected automatically."
         ),
     )
-
     col_btn, col_clear, col_dedup = st.columns([3, 1, 2])
-
     with col_btn:
         st.button(
             "🔍  Extract",
@@ -60,11 +59,8 @@ def render_input_section() -> None:
             type="primary",
             disabled=not st.session_state.get("input_text", "").strip(),
         )
-
     with col_clear:
         st.button("🗑️  Clear", on_click=clear_all, use_container_width=True)
-
     with col_dedup:
-        st.checkbox("Remove duplicates", key="remove_duplicates", value=True)
-
+        st.checkbox("Remove duplicates", key="remove_duplicates")
     st.markdown("</div>", unsafe_allow_html=True)
