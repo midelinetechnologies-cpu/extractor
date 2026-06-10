@@ -13,7 +13,6 @@ _DEFAULTS: dict = {
     "output_format": "Select Output Format",
     "sort_alphabetically": False,
     "extraction_type": "Emails",
-    "remove_duplicates": True,
     "gmail_only": False,
     "hide_directory": True,
     "hide_no_email": True,
