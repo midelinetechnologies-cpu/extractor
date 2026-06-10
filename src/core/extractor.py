@@ -2,11 +2,17 @@ import re
 from src.utils.constants import EMAIL_REGEX, URL_REGEX, PHONE_REGEX, VALID_TLDS
 from src.utils.logger import log_call
 
-_NAME_PATTERN = re.compile(r'\b([A-Z][a-z]{1,15}(?:\s[A-Z][a-z]{1,15}){1,2})\b')
+_SKIP_KEYWORDS = [
+    'contact us', 'read more', 'show number', 'discover more',
+    'call us', 'email us', 'address', 'copyright', 'all rights',
+    'quick links', 'home ·', 'shop no', 'sector', 'greater noida',
+    'uttar pradesh', 'developed by', 'phone', 'mobile', 'timing',
+    'near', 'floor', 'block', '›', '...', 'results are',
+    'privacy', 'terms', 'feedback', 'update location',
+]
 
 
 def _strip_invalid_tld(email: str) -> str:
-    """Truncate the domain at the last valid TLD, removing any trailing words."""
     at, _, domain = email.partition("@")
     parts = domain.split(".")
     for i in range(len(parts) - 1, 0, -1):
@@ -15,46 +21,32 @@ def _strip_invalid_tld(email: str) -> str:
     return email
 
 
-_NAME_SKIP = {
-    # Salutations / sign-offs
-    'The', 'This', 'That', 'These', 'Hello', 'Dear', 'From', 'To',
-    'Subject', 'Best', 'Kind', 'Warm', 'With', 'Please', 'Thank',
-    'Regards', 'Sincerely', 'Hi', 'Hey',
-    # Days & months
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
-    'January', 'February', 'March', 'April', 'June', 'July', 'August',
-    'September', 'October', 'November', 'December',
-    # UI / tool / platform labels
-    'Sales', 'Email', 'Phone', 'Contact', 'Contacts', 'Google', 'Bing',
-    'Help', 'Support', 'Center', 'Account', 'Community', 'Database',
-    'Network', 'Service', 'Services', 'Career', 'Growth', 'Excel',
-    'Text', 'File', 'Free', 'Name', 'Roll', 'Student', 'Employee',
-    'Code', 'India', 'Indian', 'Automotive', 'Navigator', 'Spreadsheet',
-    'Directory', 'Provider', 'Resume', 'Number', 'Numbers', 'Profile',
-    'Search', 'Results', 'Data', 'List', 'Export', 'Import', 'Linkedin',
-    'Twitter', 'Facebook', 'Instagram', 'Youtube', 'Microsoft', 'Apple',
-    'Institute', 'College', 'University', 'School', 'Academy',
-    'Department', 'Division', 'Office', 'Bureau', 'Ministry',
-    'Company', 'Corporation', 'Limited', 'Private',
-    'New', 'Old', 'First', 'Last', 'Next', 'Previous',
-    'Id', 'Ids', 'Pdf', 'Csv', 'Doc',
-    # Address / location tokens
-    'Postal', 'Address', 'Block', 'Court', 'Centre', 'City',
-    'Sector', 'Tower', 'Plaza', 'Mall', 'Road', 'Street', 'Lane',
-    'Floor', 'Wing', 'Phase', 'Zone', 'Area', 'Colony', 'Nagar',
-}
-
-
 @log_call
 def extract_names_heuristic(text: str) -> list[str]:
-    """Regex heuristic: capitalized word pairs/triples, filtered for common FPs."""
-    seen: set[str] = set()
-    results: list[str] = []
-    for name in _NAME_PATTERN.findall(text):
-        if name.split()[0] not in _NAME_SKIP and name not in seen:
-            seen.add(name)
-            results.append(name)
-    return results
+    names = []
+    lines = text.split('\n')
+    for i, line in enumerate(lines):
+        line = line.strip()
+        if not line:
+            continue
+        if re.match(r'https?://', line):
+            continue
+        if re.search(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}', line):
+            continue
+        if re.match(r'^\+?\d[\d\s\-]{7,}', line):
+            continue
+        if any(kw in line.lower() for kw in _SKIP_KEYWORDS):
+            continue
+        words = line.split()
+        if 2 <= len(words) <= 8:
+            if i + 1 < len(lines):
+                next_line = lines[i + 1].strip()
+                if re.match(r'https?://', next_line) or re.match(r'^[a-z0-9\-]+\.[a-z]{2,}', next_line):
+                    names.append(line)
+                    continue
+            if re.match(r'^[A-Z][a-zA-Z\s\&\'\.\-]+$', line) and len(line) > 5:
+                names.append(line)
+    return list(dict.fromkeys(names))
 
 
 def get_extractor() -> "Extractor":
@@ -102,7 +94,7 @@ class Extractor:
         return found
 
     @log_call
-    def extract_names(self, text: str, dedupe: bool = True) -> list[str]:
+    def extract_names(self, text: str, dedupe: bool = True) -> list[str]:  # noqa: ARG002
         return extract_names_heuristic(text)
 
     def extract_orgs(self, *_) -> list[str]:
