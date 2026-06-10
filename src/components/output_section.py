@@ -1,7 +1,6 @@
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
-from src.core.extractor import nlp_available
 from src.utils.constants import FORMAT_COLUMNS, SEPARATORS
 from src.utils.exporters import clipboard_html, to_csv_bytes
 from src.utils.db import push_entity_map
@@ -63,13 +62,6 @@ def _render_result_block(items: list[str], label: str) -> None:
 
 
 def _render_entity_map() -> None:
-    if not nlp_available():
-        st.warning(
-            "spaCy model not found. Run: `python -m spacy download en_core_web_sm`",
-            icon="⚠️",
-        )
-        return
-
     rows: list[dict] = st.session_state.entity_map
     if st.session_state.get("hide_no_contact"):
         rows = [r for r in rows if r.get("Emails") or r.get("URLs")]

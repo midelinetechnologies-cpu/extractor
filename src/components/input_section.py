@@ -2,12 +2,14 @@ import streamlit as st
 from src.core.extractor import get_extractor
 from src.core.mapper import build_entity_map
 from src.utils.session_state import clear_all
+from src.utils.logger import log_call
 
 
 def _request_extract() -> None:
     st.session_state._pending_extract = True
 
 
+@log_call
 def _run_extract() -> None:
     extractor = get_extractor()
     text: str = st.session_state.input_text

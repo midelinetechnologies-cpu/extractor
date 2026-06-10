@@ -1,5 +1,6 @@
 import re
 from src.utils.constants import EMAIL_REGEX, URL_REGEX, PHONE_REGEX, VALID_TLDS
+from src.utils.logger import log_call
 
 _NAME_PATTERN = re.compile(r'\b([A-Z][a-z]{1,15}(?:\s[A-Z][a-z]{1,15}){1,2})\b')
 
@@ -44,6 +45,7 @@ _NAME_SKIP = {
 }
 
 
+@log_call
 def extract_names_heuristic(text: str) -> list[str]:
     """Regex heuristic: capitalized word pairs/triples, filtered for common FPs."""
     seen: set[str] = set()
@@ -65,6 +67,7 @@ class Extractor:
         self._url_re = re.compile(URL_REGEX, re.IGNORECASE)
         self._phone_re = re.compile(PHONE_REGEX)
 
+    @log_call
     def extract_emails(self, text: str, dedupe: bool = True) -> list[str]:
         raw = self._email_re.findall(text)
         found: list[str] = []
@@ -76,6 +79,7 @@ class Extractor:
             found = list(dict.fromkeys(found))
         return found
 
+    @log_call
     def extract_urls(self, text: str, dedupe: bool = True) -> list[str]:
         # Collect email domains so we can strip them from URL results
         email_domains = {
@@ -90,12 +94,14 @@ class Extractor:
             found = list(dict.fromkeys(found))
         return found
 
+    @log_call
     def extract_phones(self, text: str, dedupe: bool = True) -> list[str]:
         found = self._phone_re.findall(text)
         if dedupe:
             found = list(dict.fromkeys(found))
         return found
 
+    @log_call
     def extract_names(self, text: str, dedupe: bool = True) -> list[str]:
         return extract_names_heuristic(text)
 

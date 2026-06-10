@@ -13,6 +13,7 @@ TSV input (tab-separated) is handled separately via _parse_tsv().
 
 import re
 from src.utils.constants import PHONE_REGEX, VALID_TLDS
+from src.utils.logger import log_call
 
 _phone_re = re.compile(PHONE_REGEX)
 
@@ -128,6 +129,7 @@ def get_base_domain(url: str) -> str:
 
 # ── Core Pipeline ─────────────────────────────────────────────────────────────
 
+@log_call
 def parse_blocks(text: str) -> list[dict]:
     """
     Walk line-by-line, anchor on every https:// URL found.
@@ -182,6 +184,7 @@ def parse_blocks(text: str) -> list[dict]:
     return raw_records
 
 
+@log_call
 def merge_records(raw_records: list[dict]) -> list[dict]:
     """Merge records that share the same base domain; accumulate emails/phones."""
     domain_map: dict[str, dict] = {}
@@ -307,6 +310,7 @@ def _parse_tsv(
 
 # ── Public entry point ────────────────────────────────────────────────────────
 
+@log_call
 def build_entity_map(
     text: str,
     hide_directory: bool = True,
