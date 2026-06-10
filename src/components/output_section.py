@@ -3,7 +3,6 @@ import streamlit as st
 import streamlit.components.v1 as components
 from src.utils.constants import FORMAT_COLUMNS, SEPARATORS
 from src.utils.exporters import clipboard_html, to_csv_bytes
-from src.utils.db import push_entity_map
 
 _NER_TYPES = {"Names", "Organizations", "All"}
 
@@ -147,13 +146,6 @@ def _render_entity_map() -> None:
         use_container_width=True,
         key="dl_map",
     )
-
-    if st.button("Send to Database", use_container_width=True, key="send_db"):
-        try:
-            n = push_entity_map(st.session_state.entity_map)
-            st.success(f"{n} record{'s' if n != 1 else ''} saved to database.")
-        except Exception as e:
-            st.error(f"Database error: {e}")
 
 
 def _nlp_warning() -> None:
