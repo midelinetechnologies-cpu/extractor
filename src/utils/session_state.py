@@ -8,16 +8,7 @@ _DEFAULTS: dict = {
     "names": [],
     "orgs": [],
     "entity_map": [],
-    "separator": "New Line",
     "filter_query": "",
-    "output_format": "Select Output Format",
-    "sort_alphabetically": False,
-    "extraction_type": "Emails",
-    "gmail_only": False,
-    "hide_directory": True,
-    "hide_no_email": True,
-    "hide_no_name": False,
-    "hide_no_contact": True,
     "has_extracted": False,
 }
 
