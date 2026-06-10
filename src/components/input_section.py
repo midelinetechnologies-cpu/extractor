@@ -4,7 +4,11 @@ from src.core.mapper import build_entity_map
 from src.utils.session_state import clear_all
 
 
-def _do_extract() -> None:
+def _request_extract() -> None:
+    st.session_state._pending_extract = True
+
+
+def _run_extract() -> None:
     extractor = get_extractor()
     text: str = st.session_state.input_text
     dedupe: bool = st.session_state.remove_duplicates
@@ -32,6 +36,7 @@ def _do_extract() -> None:
     )
     st.session_state.has_extracted = True
     st.session_state.filter_query = ""
+    st.session_state._pending_extract = False
 
 
 def render_input_section() -> None:
@@ -51,7 +56,7 @@ def render_input_section() -> None:
     with col_btn:
         st.button(
             "🔍  Extract",
-            on_click=_do_extract,
+            on_click=_request_extract,
             use_container_width=True,
             type="primary",
             disabled=not st.session_state.get("input_text", "").strip(),
@@ -61,3 +66,7 @@ def render_input_section() -> None:
     with col_dedup:
         st.checkbox("Remove duplicates", key="remove_duplicates", value=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
+    if st.session_state.get("_pending_extract"):
+        with st.spinner("Extracting…"):
+            _run_extract()
