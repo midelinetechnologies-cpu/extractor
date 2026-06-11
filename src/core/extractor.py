@@ -21,31 +21,68 @@ def _strip_invalid_tld(email: str) -> str:
     return email
 
 
+def _is_separator(line: str) -> bool:
+    s = line.strip()
+    return s in ('·', '•', '-', '|', '—', '·') or re.match(r'^[·•\-\|—\s]+$', s) is not None
+
+
+def _is_url_line(line: str) -> bool:
+    s = line.strip()
+    return bool(re.match(r'https?://', s) or re.match(r'^[a-z0-9\-]+\.[a-z]{2,}', s))
+
+
+def _is_skip(line: str) -> bool:
+    s = line.strip()
+    if not s:
+        return True
+    if re.match(r'https?://', s):
+        return True
+    if re.search(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}', s):
+        return True
+    if re.match(r'^\+?\d[\d\s\-]{7,}', s):
+        return True
+    if any(kw in s.lower() for kw in _SKIP_KEYWORDS):
+        return True
+    return False
+
+
 @log_call
 def extract_names_heuristic(text: str) -> list[str]:
     names = []
     lines = text.split('\n')
-    for i, line in enumerate(lines):
-        line = line.strip()
-        if not line:
+
+    for i, raw_line in enumerate(lines):
+        line = raw_line.strip()
+        if not _is_url_line(line):
             continue
-        if re.match(r'https?://', line):
+
+        # Walk backward up to 3 lines, skipping separators and empty lines
+        for back in range(1, 4):
+            bi = i - back
+            if bi < 0:
+                break
+            candidate = lines[bi].strip()
+            if not candidate:
+                continue
+            if _is_separator(candidate):
+                continue
+            if _is_skip(candidate):
+                break
+            words = candidate.split()
+            if 1 <= len(words) <= 8:
+                names.append(candidate)
+            break
+
+    # Also catch standalone proper-noun lines not followed by a URL
+    for i, raw_line in enumerate(lines):
+        line = raw_line.strip()
+        if _is_skip(line) or _is_separator(line):
             continue
-        if re.search(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}', line):
-            continue
-        if re.match(r'^\+?\d[\d\s\-]{7,}', line):
-            continue
-        if any(kw in line.lower() for kw in _SKIP_KEYWORDS):
-            continue
-        words = line.split()
-        if 2 <= len(words) <= 8:
-            if i + 1 < len(lines):
-                next_line = lines[i + 1].strip()
-                if re.match(r'https?://', next_line) or re.match(r'^[a-z0-9\-]+\.[a-z]{2,}', next_line):
-                    names.append(line)
-                    continue
-            if re.match(r'^[A-Z][a-zA-Z\s\&\'\.\-]+$', line) and len(line) > 5:
+        if re.match(r'^[A-Z][a-zA-Z\s\&\'\.\-]+$', line) and len(line) > 5:
+            words = line.split()
+            if 2 <= len(words) <= 8:
                 names.append(line)
+
     return list(dict.fromkeys(names))
 
 

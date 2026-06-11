@@ -64,9 +64,14 @@ def is_skip_line(line: str) -> bool:
     return any(kw in low for kw in SKIP_KEYWORDS)
 
 
+_SEPARATORS = {'·', '•', '|', '—', '-', '·'}
+
+
 def looks_like_business_name(line: str) -> bool:
     line = line.strip()
     if not line:
+        return False
+    if line in _SEPARATORS:
         return False
     if re.search(r'https?://', line):
         return False
