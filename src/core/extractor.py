@@ -16,8 +16,14 @@ def _strip_invalid_tld(email: str) -> str:
     at, _, domain = email.partition("@")
     parts = domain.split(".")
     for i in range(len(parts) - 1, 0, -1):
-        if parts[i] in VALID_TLDS:
+        part = parts[i]
+        if part in VALID_TLDS:
             return at + "@" + ".".join(parts[:i + 1])
+        # Handle junk appended directly to TLD e.g. "deread" → "de", "comread" → "com"
+        for length in range(min(6, len(part) - 1), 1, -1):
+            if part[:length] in VALID_TLDS:
+                parts[i] = part[:length]
+                return at + "@" + ".".join(parts[:i + 1])
     return email
 
 
@@ -31,11 +37,17 @@ def _is_url_line(line: str) -> bool:
     return bool(re.match(r'https?://', s) or re.match(r'^[a-z0-9\-]+\.[a-z]{2,}', s))
 
 
+def _is_bare_domain(line: str) -> bool:
+    return bool(re.match(r'^[a-zA-Z0-9][a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}$', line.strip()))
+
+
 def _is_skip(line: str) -> bool:
     s = line.strip()
     if not s:
         return True
     if re.match(r'https?://', s):
+        return True
+    if _is_bare_domain(s):
         return True
     if re.search(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}', s):
         return True

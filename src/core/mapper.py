@@ -67,11 +67,17 @@ def is_skip_line(line: str) -> bool:
 _SEPARATORS = {'·', '•', '|', '—', '-', '·'}
 
 
+def _is_bare_domain(line: str) -> bool:
+    return bool(re.match(r'^[a-zA-Z0-9][a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}$', line.strip()))
+
+
 def looks_like_business_name(line: str) -> bool:
     line = line.strip()
     if not line:
         return False
     if line in _SEPARATORS:
+        return False
+    if _is_bare_domain(line):
         return False
     if re.search(r'https?://', line):
         return False
@@ -157,6 +163,7 @@ def parse_blocks(text: str) -> list[dict]:
 
         # ── Name: walk backward up to 5 lines ────────────────────────────
         name = ''
+        domain_fallback = ''
         for back in range(1, 6):
             bi = url_line_idx - back
             if bi < 0:
@@ -171,13 +178,25 @@ def parse_blocks(text: str) -> list[dict]:
             if looks_like_business_name(candidate):
                 name = candidate
                 break
+            if _is_bare_domain(candidate) and not domain_fallback:
+                domain_fallback = candidate
 
-        # ── Emails + Phones: ±6-line window ──────────────────────────────
+        if not name and domain_fallback:
+            name = domain_fallback
+
+        # ── Emails + Phones: forward until blank line or next URL ────────
         emails: list[str] = []
         phones: list[str] = []
-        window_start = max(0, url_line_idx - 2)
-        window_end   = min(n, url_line_idx + 7)
-        for wi in range(window_start, window_end):
+
+        # backward: up to 2 lines (same block only)
+        for wi in range(max(0, url_line_idx - 2), url_line_idx):
+            emails.extend(extract_emails_from_line(lines[wi]))
+            phones.extend(extract_phones_from_line(lines[wi]))
+
+        # forward: stop at blank line or another URL
+        for wi in range(url_line_idx, min(n, url_line_idx + 10)):
+            if wi > url_line_idx and (not lines[wi] or extract_url_from_line(lines[wi])):
+                break
             emails.extend(extract_emails_from_line(lines[wi]))
             phones.extend(extract_phones_from_line(lines[wi]))
 
