@@ -79,28 +79,31 @@ def migrate():
 
     with my.cursor() as my_cur:
         ensure_mysql_table(my_cur)
-
-        # Fetch already-migrated IDs to skip duplicates
         my_cur.execute("SELECT id FROM extracted_data")
         existing_ids = {r["id"] for r in my_cur.fetchall()}
 
-        new_rows = [r for r in rows if r["id"] not in existing_ids]
-        skipped  = len(rows) - len(new_rows)
-        inserted = 0
+    new_rows = [r for r in rows if r["id"] not in existing_ids]
+    skipped  = len(rows) - len(new_rows)
+    inserted = 0
+    deleted  = 0
 
-        for offset in range(0, len(new_rows), CHUNK_SIZE):
-            chunk = new_rows[offset : offset + CHUNK_SIZE]
-            values = [
-                (
-                    row["id"],
-                    row["name"],
-                    json.dumps(row["emails"] or []),
-                    json.dumps(row["phones"] or []),
-                    json.dumps(row["urls"]   or []),
-                    row["created_at"],
-                )
-                for row in chunk
-            ]
+    for offset in range(0, len(new_rows), CHUNK_SIZE):
+        chunk = new_rows[offset : offset + CHUNK_SIZE]
+        chunk_ids = [row["id"] for row in chunk]
+
+        # ── Step 1: insert chunk into MySQL ───────────────────────────────
+        values = [
+            (
+                row["id"],
+                row["name"],
+                json.dumps(row["emails"] or []),
+                json.dumps(row["phones"] or []),
+                json.dumps(row["urls"]   or []),
+                row["created_at"],
+            )
+            for row in chunk
+        ]
+        with my.cursor() as my_cur:
             my_cur.executemany(
                 """
                 INSERT INTO extracted_data (id, name, emails, phones, urls, created_at)
@@ -108,29 +111,19 @@ def migrate():
                 """,
                 values,
             )
-            my.commit()
-            inserted += len(chunk)
-            print(f"  Inserted {inserted}/{len(new_rows)} rows...")
+        my.commit()
+        inserted += len(chunk)
+        print(f"  Migrated {inserted}/{len(new_rows)} rows to MySQL...")
 
-
-
-    # ── Delete ALL Hostinger IDs from Railway PostgreSQL ─────────────────────
-    with my.cursor() as my_cur:
-        my_cur.execute("SELECT id FROM extracted_data")
-        hostinger_ids = [r["id"] for r in my_cur.fetchall()]
-
-    print(f"Deleting {len(hostinger_ids)} rows from Railway that exist in Hostinger...")
-    deleted = 0
-    with pg.cursor() as pg_cur:
-        for offset in range(0, len(hostinger_ids), CHUNK_SIZE):
-            chunk_ids = hostinger_ids[offset : offset + CHUNK_SIZE]
+        # ── Step 2: delete that same chunk from Railway PostgreSQL ────────
+        with pg.cursor() as pg_cur:
             pg_cur.execute(
                 "DELETE FROM extracted_data WHERE id = ANY(%s)",
                 (chunk_ids,),
             )
             pg.commit()
             deleted += pg_cur.rowcount
-            print(f"  Deleted {deleted}/{len(hostinger_ids)} rows from Railway...")
+        print(f"  Deleted {deleted} rows from Railway so far...")
 
     pg.close()
     my.close()
