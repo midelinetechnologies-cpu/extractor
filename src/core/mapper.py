@@ -99,8 +99,14 @@ def _strip_invalid_tld(email: str) -> str:
     at, _, domain = email.partition("@")
     parts = domain.split(".")
     for i in range(len(parts) - 1, 0, -1):
-        if parts[i] in VALID_TLDS:
+        part = parts[i]
+        if part in VALID_TLDS:
             return at + "@" + ".".join(parts[:i + 1])
+        # Strip junk appended directly to TLD e.g. "comread" → "com", "deread" → "de"
+        for length in range(min(6, len(part) - 1), 1, -1):
+            if part[:length] in VALID_TLDS:
+                parts[i] = part[:length]
+                return at + "@" + ".".join(parts[:i + 1])
     return email
 
 
@@ -136,6 +142,17 @@ def get_base_domain(url: str) -> str:
     url = url.lower().rstrip('/')
     url = re.sub(r'^https?://', '', url)
     return url.split('/')[0]
+
+
+# ── Text pre-cleaning ─────────────────────────────────────────────────────────
+
+_UI_ARTIFACTS = re.compile(
+    r'\s*\b(Read\s+more|Read\s+less|Show\s+more|Show\s+less|See\s+more|See\s+less)\b',
+    re.IGNORECASE,
+)
+
+def _clean_text(text: str) -> str:
+    return _UI_ARTIFACTS.sub('', text)
 
 
 # ── Core Pipeline ─────────────────────────────────────────────────────────────
@@ -244,6 +261,8 @@ def build_result_list(
 
         unique_emails: list[str] = []
         for e in rec['emails']:
+            if len(unique_emails) >= 4:
+                break
             if e not in seen_emails:
                 seen_emails.add(e)
                 unique_emails.append(e)
@@ -341,6 +360,8 @@ def build_entity_map(
     hide_no_email: bool = False,
     hide_no_name: bool = False,
 ) -> list[dict]:
+    text = _clean_text(text)
+
     if _is_tsv(text):
         return _parse_tsv(text, hide_directory, hide_no_email, hide_no_name)
 
