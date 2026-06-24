@@ -9,6 +9,7 @@ _DEFAULTS: dict = {
     "orgs": [],
     "entity_map": [],
     "filter_query": "",
+    "email_prefix_filter": [],
     "has_extracted": False,
 }
 

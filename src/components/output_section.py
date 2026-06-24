@@ -13,9 +13,19 @@ def _split_comma_values(cell: str) -> list[str]:
     return [part.strip() for part in str(cell).split(",") if part.strip()]
 
 
+def _passes_prefix_filter(email: str) -> bool:
+    """Return True if the email should be shown given the active prefix filter."""
+    prefixes = [p.lower() for p in st.session_state.get("email_prefix_filter", [])]
+    if not prefixes:
+        return True
+    return any(email.lower().startswith(p) for p in prefixes)
+
+
 def _filtered_sorted(items: list[str], label: str = "") -> list[str]:
     if st.session_state.get("gmail_only") and label in ("emails", "email"):
         items = [i for i in items if i.endswith("@gmail.com")]
+    if label in ("emails", "email"):
+        items = [i for i in items if _passes_prefix_filter(i)]
     q = st.session_state.filter_query.strip().lower()
     if q:
         items = [i for i in items if q in i.lower()]
@@ -83,6 +93,30 @@ def _render_entity_map() -> None:
             return ", ".join(e for e in cell.split(", ") if e.endswith("@gmail.com"))
 
         df_full["Emails"] = df_full["Emails"].apply(_filter_gmails)
+
+    if "Emails" in show_cols:
+
+        def _filter_prefixes(cell: str) -> str:
+            return ", ".join(
+                e for e in cell.split(", ") if e.strip() and _passes_prefix_filter(e.strip())
+            )
+
+        df_full["Emails"] = df_full["Emails"].apply(_filter_prefixes)
+
+        if st.session_state.get("email_prefix_filter"):
+            df_full = df_full[df_full["Emails"].str.strip().astype(bool)]
+
+    if df_full.empty:
+        st.info("No emails match the selected prefix filter.")
+        return
+
+    q = st.session_state.get("filter_query", "").strip().lower()
+    if q and "Emails" in df_full.columns:
+        df_full = df_full[df_full["Emails"].fillna("").str.lower().str.contains(q, regex=False)]
+
+    if df_full.empty:
+        st.info("No results match the current filter.")
+        return
 
     df = df_full[[c for c in show_cols if c in df_full.columns]]
 

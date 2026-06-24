@@ -63,3 +63,9 @@ FORMAT_COLUMNS: dict[str, list[str]] = {
     "Name + Website + Email + Phone":["Name", "URLs", "Emails", "Phones"],
 }
 EXTRACTION_TYPES = [ "All"]
+
+GENERIC_EMAIL_PREFIXES = [
+    "info@", "sales@", "contact@", "email@", "hello@",
+    "support@", "customer@", "job@", "privacy@",
+    "order@", "enquiry@", "inquiry@",
+]

@@ -4,6 +4,7 @@ from src.core.mapper import build_entity_map
 from src.utils.session_state import clear_all
 from src.utils.logger import log_call
 from src.utils.db import push_entity_map
+from src.utils.constants import GENERIC_EMAIL_PREFIXES
 
 
 def _request_extract() -> None:
@@ -73,6 +74,22 @@ def render_input_section() -> None:
         st.button("🗑️  Clear", on_click=clear_all, use_container_width=True)
     with col_dedup:
         st.checkbox("Remove duplicates", key="remove_duplicates", value=True)
+
+    selected = st.multiselect(
+        label="Show only emails with prefix",
+        options=GENERIC_EMAIL_PREFIXES,
+        default=st.session_state.get("email_prefix_filter", []),
+        key="email_prefix_filter",
+        placeholder="All emails shown — select prefixes to filter…",
+        label_visibility="collapsed",
+    )
+    if selected:
+        st.warning(
+            "Prefix filter active — only emails matching the selected prefixes will be shown. "
+            "Large result sets may take a moment to filter.",
+            icon="⚠️",
+        )
+
     st.markdown("</div>", unsafe_allow_html=True)
 
     if st.session_state.get("_pending_extract"):
