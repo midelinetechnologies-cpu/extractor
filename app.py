@@ -11,7 +11,7 @@ def _start_api() -> None:
 threading.Thread(target=_start_api, daemon=True).start()
 
 st.set_page_config(
-    page_title="Email Extractor Pro",
+    page_title="Mail Extractor – mailextractor.in",
     page_icon="📧",
     layout="wide",
     initial_sidebar_state="collapsed",
