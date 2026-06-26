@@ -134,6 +134,8 @@ def _render_entity_map() -> None:
         if col in df.columns:
             split_series = df[col].apply(_split_comma_values)
             max_items = int(split_series.apply(len).max())
+            if col == "Phones":
+                max_items = min(max_items, 2)
             if max_items > 1:
                 insert_at = df.columns.get_loc(col)
                 expanded = pd.DataFrame(
