@@ -23,6 +23,7 @@ from src.components.header import render_header
 from src.components.input_section import render_input_section
 from src.components.controls import render_controls
 from src.components.output_section import render_output_section
+from src.components.url_validator import render_url_validator
 
 
 def main() -> None:
@@ -31,14 +32,18 @@ def main() -> None:
 
     render_header()
 
-    left, right = st.columns([1, 1], gap="large")
+    tab_extractor, tab_url_checker = st.tabs(["📧 Mail Extractor", "🔗 URL Validator"])
 
-    with left:
-        render_input_section()
-        render_controls()
+    with tab_extractor:
+        left, right = st.columns([1, 1], gap="large")
+        with left:
+            render_input_section()
+            render_controls()
+        with right:
+            render_output_section()
 
-    with right:
-        render_output_section()
+    with tab_url_checker:
+        render_url_validator()
 
 
 if __name__ == "__main__":
