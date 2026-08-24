@@ -1,7 +1,6 @@
 import requests
 import time
 import re
-from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import List, Optional
@@ -47,7 +46,6 @@ def normalize_url(url: str) -> str:
     if not url:
         return url
 
-    # Fix common scheme typos (htps://, htp://, htpps://, etc.)
     m = _TYPO_SCHEME_RE.match(url)
     if m:
         rest = url[m.end():]
@@ -57,11 +55,7 @@ def normalize_url(url: str) -> str:
     elif url.startswith("://"):
         url = "https" + url
     elif not url.startswith(("http://", "https://")):
-        # Bare domain: www.example.com or example.com
-        if url.startswith("www."):
-            url = "https://" + url
-        else:
-            url = "https://" + url
+        url = "https://" + url
 
     return url
 
@@ -71,7 +65,7 @@ def validate_url(url: str) -> bool:
 
 
 def check_single_url(
-    url: str, timeout: int = 10, verify_ssl: bool = True
+    url: str, timeout: int = 10, verify_ssl: bool = True,
 ) -> URLResult:
     normalized_url = normalize_url(url)
 
@@ -154,11 +148,12 @@ def check_multiple_urls(
 ) -> List[URLResult]:
     results = []
     total = len(urls)
-    normalized_urls = [normalize_url(u) for u in urls]
 
     with ThreadPoolExecutor(max_workers=min(max_workers, total)) as executor:
         future_to_idx = {
-            executor.submit(check_single_url, url, timeout, verify_ssl): i
+            executor.submit(
+                check_single_url, url, timeout, verify_ssl
+            ): i
             for i, url in enumerate(urls)
         }
         completed = 0
