@@ -118,19 +118,9 @@ def _render_working_urls(results: List[URLResult]) -> None:
 def render_url_validator() -> None:
     _init_url_state()
 
-    # ── Settings ──
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown("#### Settings")
-
-    s1, s2, s3 = st.columns(3)
-    with s1:
-        timeout = st.slider("Timeout (seconds)", 1, 30, 10, key="uv_timeout")
-    with s2:
-        max_workers = st.slider("Concurrent Requests", 1, 20, 10, key="uv_workers")
-    with s3:
-        verify_ssl = st.checkbox("Verify SSL Certificates", value=True, key="uv_ssl")
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    timeout = 10
+    max_workers = 10
+    verify_ssl = True
 
     # ── URL Input ──
     st.markdown('<div class="card">', unsafe_allow_html=True)
