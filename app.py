@@ -14,6 +14,7 @@ from src.components.input_section import render_input_section
 from src.components.controls import render_controls
 from src.components.output_section import render_output_section
 from src.components.url_validator import render_url_validator
+from src.components.website_extractor import render_website_extractor
 
 
 def main() -> None:
@@ -22,7 +23,9 @@ def main() -> None:
 
     render_header()
 
-    tab_extractor, tab_url_checker = st.tabs(["📧 Mail Extractor", "🔗 URL Validator"])
+    tab_extractor, tab_url_checker, tab_web_scraper = st.tabs(
+        ["📧 Mail Extractor", "🔗 URL Validator", "🌐 Extract from Website"]
+    )
 
     with tab_extractor:
         left, right = st.columns([1, 1], gap="large")
@@ -34,6 +37,9 @@ def main() -> None:
 
     with tab_url_checker:
         render_url_validator()
+
+    with tab_web_scraper:
+        render_website_extractor()
 
 
 if __name__ == "__main__":
