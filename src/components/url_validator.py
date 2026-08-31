@@ -11,6 +11,7 @@ from src.core.url_checker import (
     parse_url_input,
 )
 from src.utils.exporters import clipboard_html
+from src.utils.db import push_validated_urls, push_not_validated_urls
 
 
 def _init_url_state() -> None:
@@ -115,6 +116,73 @@ def _render_working_urls(results: List[URLResult]) -> None:
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+def _render_not_working_urls(results: List[URLResult]) -> None:
+    not_working = [r for r in results if not r.is_working]
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("#### Not Working URLs")
+
+    if not not_working:
+        st.markdown(
+            '<div class="empty-state"><p>All URLs are working!</p></div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    st.markdown(
+        f'<div class="counter-badge">{len(not_working)} failed URL{"s" if len(not_working) != 1 else ""}</div>',
+        unsafe_allow_html=True,
+    )
+
+    rows = []
+    for r in not_working:
+        rows.append({
+            "URL": r.url,
+            "Error": r.error_message or "Unknown",
+            "Status Code": r.status_code if r.status_code else "N/A",
+        })
+
+    df_down = pd.DataFrame(rows)
+    st.dataframe(df_down, use_container_width=True, hide_index=True)
+
+    down_text = "\n".join(r.url for r in not_working)
+
+    copy_col, txt_col, xl_col = st.columns(3)
+    with copy_col:
+        components.html(
+            clipboard_html(down_text, btn_id="copy_down_urls"),
+            height=52,
+        )
+    with txt_col:
+        st.download_button(
+            "Download TXT",
+            data=down_text.encode("utf-8"),
+            file_name=f"not_working_urls_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+            mime="text/plain",
+            use_container_width=True,
+            key="uv_dl_down_txt",
+        )
+    with xl_col:
+        buf = io.BytesIO()
+        with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+            df_down.to_excel(writer, index=False, sheet_name="Not Working URLs")
+            ws = writer.sheets["Not Working URLs"]
+            for col in ws.columns:
+                max_len = max((len(str(c.value)) if c.value else 0) for c in col)
+                ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 70)
+        st.download_button(
+            "Download Excel",
+            data=buf.getvalue(),
+            file_name=f"not_working_urls_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="uv_dl_down_xlsx",
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
 def render_url_validator() -> None:
     _init_url_state()
 
@@ -170,6 +238,13 @@ def render_url_validator() -> None:
                 "results": results,
             })
 
+            try:
+                saved_up = push_validated_urls(results)
+                saved_down = push_not_validated_urls(results)
+                st.toast(f"Saved to DB: {saved_up} working, {saved_down} not working")
+            except Exception as e:
+                st.warning(f"Could not save to DB: {e}")
+
     # ── Results ──
     if st.session_state.url_results:
         results = st.session_state.url_results
@@ -180,6 +255,7 @@ def render_url_validator() -> None:
         st.markdown("</div>", unsafe_allow_html=True)
 
         _render_working_urls(results)
+        _render_not_working_urls(results)
 
     # ── History ──
     if st.session_state.url_history:
