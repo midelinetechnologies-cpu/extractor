@@ -28,6 +28,28 @@ def _parse_urls(raw: str) -> list[str]:
     return [p.strip() for p in parts if p.strip()]
 
 
+def _expand_list_columns(df: pd.DataFrame, col: str, label: str) -> pd.DataFrame:
+    """Replace a semicolon-joined column with numbered columns: Email 1, Email 2, etc."""
+    if col not in df.columns:
+        return df
+
+    split = df[col].apply(lambda v: [x.strip() for x in str(v).split(';') if x.strip()])
+    max_items = int(split.apply(len).max()) if not split.empty else 0
+
+    if max_items == 0:
+        df.drop(columns=[col], inplace=True)
+        return df
+
+    insert_at = df.columns.get_loc(col)
+    expanded = pd.DataFrame({
+        f"{label} {i + 1}": split.apply(lambda vals, idx=i: vals[idx] if idx < len(vals) else "")
+        for i in range(max_items)
+    })
+    left = df.iloc[:, :insert_at]
+    right = df.iloc[:, insert_at + 1:]
+    return pd.concat([left, expanded, right], axis=1)
+
+
 def _results_to_df(results: list[dict]) -> pd.DataFrame:
     rows = []
     for r in results:
@@ -35,7 +57,6 @@ def _results_to_df(results: list[dict]) -> pd.DataFrame:
             'Domain': r.get('domain', r.get('url', '')),
             'Organization': r.get('org_name', ''),
             'Business Type': r.get('business_type', ''),
-            'Confidence': f"{r.get('business_confidence', 0)}%",
             'Industry': r.get('industry', ''),
             'Offerings': '; '.join(r.get('offerings', [])),
             'Description': r.get('description', ''),
@@ -51,7 +72,10 @@ def _results_to_df(results: list[dict]) -> pd.DataFrame:
             'Pages Crawled': r.get('pages_crawled', 0),
             'Status': r.get('status', ''),
         })
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    df = _expand_list_columns(df, 'Emails', 'Email')
+    df = _expand_list_columns(df, 'Phones', 'Phone')
+    return df
 
 
 def _render_summary(results: list[dict]) -> None:
@@ -157,17 +181,13 @@ def render_lead_extractor() -> None:
         key="le_input",
     )
 
-    col_btn, col_workers = st.columns([3, 1])
-    with col_btn:
-        st.button(
-            "Extract Leads",
-            type="primary",
-            key="le_extract",
-            use_container_width=True,
-            on_click=_request_extract,
-        )
-    with col_workers:
-        max_workers = st.number_input("Threads", min_value=1, max_value=20, value=5, key="le_workers")
+    st.button(
+        "Extract Leads",
+        type="primary",
+        key="le_extract",
+        use_container_width=True,
+        on_click=_request_extract,
+    )
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -189,7 +209,7 @@ def render_lead_extractor() -> None:
             scraper = LeadScraper()
             results = scraper.process_urls(
                 urls,
-                max_workers=max_workers,
+                max_workers=5,
                 progress_callback=update_progress,
             )
             progress_bar.empty()
@@ -211,12 +231,6 @@ def render_lead_extractor() -> None:
         _render_summary(results)
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # Lead cards
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown("#### Lead Cards")
-        _render_lead_cards(results)
-        st.markdown("</div>", unsafe_allow_html=True)
-
         # Full data table
         df = _results_to_df(results)
 
@@ -225,4 +239,10 @@ def render_lead_extractor() -> None:
         st.dataframe(df, use_container_width=True, hide_index=True)
 
         _render_export_buttons(df)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # Lead cards
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("#### Lead Cards")
+        _render_lead_cards(results)
         st.markdown("</div>", unsafe_allow_html=True)
