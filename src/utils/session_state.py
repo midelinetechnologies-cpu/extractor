@@ -11,6 +11,7 @@ _DEFAULTS: dict = {
     "filter_query": "",
     "email_prefix_filter": [],
     "has_extracted": False,
+    "hide_role_accounts": False,
 }
 
 

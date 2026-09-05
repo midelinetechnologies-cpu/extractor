@@ -31,21 +31,23 @@ def clipboard_html(text: str, btn_id: str = "copy_btn") -> str:
     escaped_js = text.replace("\\", "\\\\").replace("`", "\\`").replace("$", "\\$")
     return f"""
     <button id="{btn_id}" style="
-      width:100%;background:#1a2332;color:#4d8bf5;
-      border:1px solid #4d8bf5;padding:8px 16px;
-      border-radius:8px;cursor:pointer;font-size:14px;
+      width:100%;background:transparent;color:#94a3b8;
+      border:1px solid #1e293b;padding:8px 16px;
+      border-radius:10px;cursor:pointer;font-size:14px;
       font-family:sans-serif;transition:all .2s;
-    " onclick="(function(){{
+    " onmouseover="this.style.borderColor='#3b82f6';this.style.color='#e2e8f0'"
+       onmouseout="this.style.borderColor='#1e293b';this.style.color='#94a3b8'"
+       onclick="(function(){{
       var btn = document.getElementById('{btn_id}');
       var txt = `{escaped_js}`;
       function ok(){{
         btn.innerHTML = '&#10003; Copied!';
-        btn.style.borderColor = '#10b981';
-        btn.style.color = '#10b981';
+        btn.style.borderColor = '#22c55e';
+        btn.style.color = '#22c55e';
         setTimeout(function(){{
-          btn.innerHTML = '&#128203; Copy to Clipboard';
-          btn.style.borderColor='#4d8bf5';
-          btn.style.color='#4d8bf5';
+          btn.innerHTML = '&#128203; Copy all';
+          btn.style.borderColor='#1e293b';
+          btn.style.color='#94a3b8';
         }}, 2000);
       }}
       try {{
@@ -59,5 +61,5 @@ def clipboard_html(text: str, btn_id: str = "copy_btn") -> str:
         document.body.removeChild(ta);
         ok();
       }}
-    }})()">&#128203; Copy to Clipboard</button>
+    }})()">&#128203; Copy all</button>
     """
