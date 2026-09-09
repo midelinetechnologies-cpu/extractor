@@ -28,13 +28,15 @@ def _parse_urls(raw: str) -> list[str]:
     return [p.strip() for p in parts if p.strip()]
 
 
-def _expand_list_columns(df: pd.DataFrame, col: str, label: str) -> pd.DataFrame:
+def _expand_list_columns(df: pd.DataFrame, col: str, label: str, cap: int = 0) -> pd.DataFrame:
     """Replace a semicolon-joined column with numbered columns: Email 1, Email 2, etc."""
     if col not in df.columns:
         return df
 
     split = df[col].apply(lambda v: [x.strip() for x in str(v).split(';') if x.strip()])
     max_items = int(split.apply(len).max()) if not split.empty else 0
+    if cap > 0:
+        max_items = min(max_items, cap)
 
     if max_items == 0:
         df.drop(columns=[col], inplace=True)
@@ -73,8 +75,8 @@ def _results_to_df(results: list[dict]) -> pd.DataFrame:
             'Status': r.get('status', ''),
         })
     df = pd.DataFrame(rows)
-    df = _expand_list_columns(df, 'Emails', 'Email')
-    df = _expand_list_columns(df, 'Phones', 'Phone')
+    df = _expand_list_columns(df, 'Emails', 'Email', cap=3)
+    df = _expand_list_columns(df, 'Phones', 'Phone', cap=2)
     return df
 
 

@@ -2,9 +2,9 @@
 Entity mapping engine — based on test2.py URL-anchored window approach.
 
 Strategy:
-  1. Find every https:// URL in the text.
-  2. For each URL look backward ≤5 lines for a business/person name.
-  3. Scan a ±6-line window around the URL for emails and phones.
+  1. Find every https:// URL *and* bare domain in the text.
+  2. For each anchor look backward ≤5 lines for a business/person name.
+  3. Scan a ±6-line window around the anchor for emails and phones.
   4. Merge records that share the same base domain.
   5. Apply optional filters (hide directories, require email/name).
 
@@ -121,7 +121,11 @@ def extract_emails_from_line(line: str) -> list[str]:
 
 def extract_url_from_line(line: str) -> list[str]:
     urls = re.findall(r'https?://[^\s\)\]\>\"\'\,]+', line)
-    return [re.sub(r'[.,;!\?\)\]\>\'\"]+$', '', u) for u in urls]
+    cleaned = [re.sub(r'[.,;!\?\)\]\>\'\"]+$', '', u) for u in urls]
+    if not cleaned and _is_bare_domain(line):
+        domain = line.strip().lower()
+        cleaned.append(f'https://{domain}')
+    return cleaned
 
 
 def extract_phones_from_line(line: str) -> list[str]:
@@ -160,10 +164,10 @@ def _clean_text(text: str) -> str:
 @log_call
 def parse_blocks(text: str) -> list[dict]:
     """
-    Walk line-by-line, anchor on every https:// URL found.
-    For each URL:
+    Walk line-by-line, anchor on every https:// URL or bare domain found.
+    For each anchor:
       - Name   : look backward ≤5 lines for a business-name candidate.
-      - Emails : ±6-line window around the URL line.
+      - Emails : ±6-line window around the anchor line.
       - Phones : same window.
     """
     lines = [l.strip() for l in text.splitlines()]
@@ -261,7 +265,7 @@ def build_result_list(
 
         unique_emails: list[str] = []
         for e in rec['emails']:
-            if len(unique_emails) >= 4:
+            if len(unique_emails) >= 3:
                 break
             if e not in seen_emails:
                 seen_emails.add(e)
