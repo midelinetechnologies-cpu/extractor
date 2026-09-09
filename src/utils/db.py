@@ -121,6 +121,78 @@ def push_not_validated_urls(results: list) -> int:
     return len(records)
 
 
+def _ensure_lead_cards_table() -> None:
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS lead_cards (
+                    id               SERIAL PRIMARY KEY,
+                    domain           TEXT        NOT NULL,
+                    company_name     TEXT        NOT NULL DEFAULT '',
+                    business_type    TEXT        NOT NULL DEFAULT 'Unknown',
+                    secondary_type   TEXT        NOT NULL DEFAULT '',
+                    confidence       FLOAT       NOT NULL DEFAULT 0,
+                    industry         TEXT        NOT NULL DEFAULT '',
+                    offerings        TEXT[]      NOT NULL DEFAULT '{}',
+                    description      TEXT        NOT NULL DEFAULT '',
+                    emails           TEXT[]      NOT NULL DEFAULT '{}',
+                    phones           TEXT[]      NOT NULL DEFAULT '{}',
+                    social_links     JSONB       NOT NULL DEFAULT '{}',
+                    addresses        TEXT[]      NOT NULL DEFAULT '{}',
+                    tech_stack       TEXT[]      NOT NULL DEFAULT '{}',
+                    pages_crawled    INT         NOT NULL DEFAULT 0,
+                    status           TEXT        NOT NULL DEFAULT 'success',
+                    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+            """)
+        conn.commit()
+
+
+def push_lead_cards(results: list[dict]) -> int:
+    if not results:
+        return 0
+
+    _ensure_lead_cards_table()
+
+    import json as _json
+
+    records = [
+        (
+            r.get('domain', ''),
+            r.get('org_name', ''),
+            r.get('business_type', 'Unknown'),
+            r.get('secondary_type', ''),
+            r.get('business_confidence', 0),
+            r.get('industry', ''),
+            r.get('offerings', []),
+            r.get('description', ''),
+            r.get('emails', []),
+            r.get('phones', []),
+            _json.dumps(r.get('social_links', {})),
+            r.get('addresses', []),
+            r.get('tech_stack', []),
+            r.get('pages_crawled', 0) if isinstance(r.get('pages_crawled'), int) else len(r.get('pages_crawled', [])),
+            r.get('status', 'success'),
+        )
+        for r in results
+    ]
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            psycopg2.extras.execute_values(
+                cur,
+                """INSERT INTO lead_cards
+                   (domain, company_name, business_type, secondary_type, confidence,
+                    industry, offerings, description, emails, phones,
+                    social_links, addresses, tech_stack, pages_crawled, status)
+                   VALUES %s""",
+                records,
+            )
+        conn.commit()
+
+    return len(records)
+
+
 def push_entity_map(rows: list[dict]) -> int:
     if not rows:
         return 0
