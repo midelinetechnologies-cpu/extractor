@@ -15,6 +15,7 @@ from src.components.controls import render_controls
 from src.components.output_section import render_output_section
 from src.components.url_validator import render_url_validator
 from src.components.lead_extractor_ui import render_lead_extractor
+from src.components.merchant_genius_ui import render_merchant_genius
 
 
 def main() -> None:
@@ -23,8 +24,8 @@ def main() -> None:
 
     render_header()
 
-    tab_extractor, tab_url_checker, tab_lead = st.tabs(
-        ["📧 Mail Extractor", "🔗 URL Validator", "🏢 Lead Extractor"]
+    tab_extractor, tab_url_checker, tab_lead, tab_mg = st.tabs(
+        ["📧 Mail Extractor", "🔗 URL Validator", "🏢 Lead Extractor", "🛒 Merchant Genius"]
     )
 
     with tab_extractor:
@@ -40,6 +41,9 @@ def main() -> None:
 
     with tab_lead:
         render_lead_extractor()
+
+    with tab_mg:
+        render_merchant_genius()
 
 
 if __name__ == "__main__":
