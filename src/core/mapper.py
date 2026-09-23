@@ -41,6 +41,7 @@ SKIP_KEYWORDS = [
     'scan this', 'qr code', 'experience', 'appointment',
     'instafinancials', 'bizmart', 'slideserve', 'rackons',
     'customercareinfo', 'placementindia',
+    'no description',
 ]
 
 DIRECTORY_DOMAINS = [
@@ -86,6 +87,8 @@ def looks_like_business_name(line: str) -> bool:
     if re.match(r'^\+?\d[\d\s\-]{6,}', line):
         return False
     if is_skip_line(line):
+        return False
+    if re.match(r'^\(.*\)$', line):
         return False
     words = line.split()
     if not (1 <= len(words) <= 8):
@@ -146,6 +149,16 @@ def get_base_domain(url: str) -> str:
     url = url.lower().rstrip('/')
     url = re.sub(r'^https?://', '', url)
     return url.split('/')[0]
+
+
+def _name_from_url(url: str) -> str:
+    domain = get_base_domain(url)
+    if not domain:
+        return ''
+    domain = re.sub(r'^www\.', '', domain)
+    org = domain.split('.')[0]
+    org = re.sub(r'[\-_]+', ' ', org)
+    return org.strip().title()
 
 
 # ── Text pre-cleaning ─────────────────────────────────────────────────────────
@@ -209,14 +222,16 @@ def parse_blocks(text: str) -> list[dict]:
         emails: list[str] = []
         phones: list[str] = []
 
-        # backward: up to 2 lines (same block only)
-        for wi in range(max(0, url_line_idx - 2), url_line_idx):
+        # backward: up to 2 lines, stop at blank line to avoid cross-entity leakage
+        for wi in range(url_line_idx - 1, max(-1, url_line_idx - 3), -1):
+            if wi < 0 or not lines[wi]:
+                break
             emails.extend(extract_emails_from_line(lines[wi]))
             phones.extend(extract_phones_from_line(lines[wi]))
 
-        # forward: stop at blank line or another URL
+        # forward: scan until the next URL/domain anchor (allow blank lines within entity)
         for wi in range(url_line_idx, min(n, url_line_idx + 10)):
-            if wi > url_line_idx and (not lines[wi] or extract_url_from_line(lines[wi])):
+            if wi > url_line_idx and extract_url_from_line(lines[wi]):
                 break
             emails.extend(extract_emails_from_line(lines[wi]))
             phones.extend(extract_phones_from_line(lines[wi]))
@@ -274,6 +289,8 @@ def build_result_list(
         email_str = ', '.join(unique_emails)
         phone_str = ', '.join(rec['phones'])
         name = rec['name'].strip()
+        if not name and url:
+            name = _name_from_url(url)
 
         if hide_no_email and not email_str:
             continue

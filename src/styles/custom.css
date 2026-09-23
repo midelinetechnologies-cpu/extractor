@@ -1,12 +1,12 @@
 /* ── Base ─────────────────────────────── */
 .stApp {
-    background-color: #0d1421;
+    background-color: #ffffff;
 }
 
 /* ── Cards ───────────────────────────── */
 .card {
-    background: #1a2332;
-    border: 1px solid #2d3748;
+    background: #f8f9fa;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 20px;
@@ -14,21 +14,21 @@
 
 /* ── Header ──────────────────────────── */
 .header-card {
-    background: linear-gradient(135deg, #1a2332 0%, #162030 100%);
-    border: 1px solid #2d3748;
+    background: linear-gradient(135deg, #f8f9fa 0%, #edf2f7 100%);
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 36px 24px 28px;
     margin-bottom: 28px;
     text-align: center;
 }
 .header-card h1 {
-    color: #e2e8f0;
+    color: #1a202c;
     font-size: 2.2rem;
     font-weight: 700;
     margin-bottom: 8px;
 }
 .header-card p {
-    color: #94a3b8;
+    color: #64748b;
     font-size: 1rem;
     margin: 0;
 }
@@ -38,7 +38,7 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: rgba(77, 139, 245, 0.1);
+    background: rgba(77, 139, 245, 0.08);
     border: 1px solid #4d8bf5;
     border-radius: 20px;
     padding: 6px 16px;
@@ -52,7 +52,7 @@
 .empty-state {
     text-align: center;
     padding: 40px 20px;
-    color: #64748b;
+    color: #94a3b8;
 }
 .empty-state .icon {
     font-size: 3rem;
@@ -62,9 +62,9 @@
 /* ── Streamlit element overrides ─────── */
 [data-testid="stTextArea"] textarea,
 [data-testid="stTextInput"] input {
-    background-color: #0d1421 !important;
-    border: 1px solid #2d3748 !important;
-    color: #e2e8f0 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #1a202c !important;
     border-radius: 8px !important;
 }
 [data-testid="stTextArea"] textarea:focus,
@@ -74,9 +74,9 @@
 }
 
 [data-testid="stSelectbox"] > div > div {
-    background-color: #0d1421 !important;
-    border: 1px solid #2d3748 !important;
-    color: #e2e8f0 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #1a202c !important;
     border-radius: 8px !important;
 }
 
@@ -122,7 +122,7 @@
 
 /* Tabs */
 [data-testid="stTabs"] [data-baseweb="tab"] {
-    color: #94a3b8;
+    color: #64748b;
 }
 [data-testid="stTabs"] [aria-selected="true"] {
     color: #4d8bf5 !important;
@@ -133,14 +133,14 @@
 
 /* ── URL Validator ──────────────────── */
 [data-testid="stMetric"] {
-    background: #1a2332;
-    border: 1px solid #2d3748;
+    background: #f8f9fa;
+    border: 1px solid #e2e8f0;
     border-radius: 10px;
     padding: 12px 16px;
 }
 [data-testid="stMetric"] label {
-    color: #94a3b8 !important;
+    color: #64748b !important;
 }
 [data-testid="stMetric"] [data-testid="stMetricValue"] {
-    color: #e2e8f0 !important;
+    color: #1a202c !important;
 }
