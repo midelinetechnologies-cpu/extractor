@@ -28,8 +28,10 @@ def main() -> None:
     render_header()
 
     tab_extractor, tab_url_checker, tab_lead, tab_yelp, tab_mg, tab_geo, tab_fsq = st.tabs(
-        ["📧 Mail Extractor", "🔗 URL Validator", "🏢 Lead Extractor",
-         "🗺️ Local Leads", "🛒 Merchant Genius", "📍 Geoapify Leads", "📌 Foursquare"]
+        ["📧 Mail Extractor", "🔗 URL Validator", "🏢 Lead Extractor","🛒 Merchant Genius",
+         "🗺️ Local Leads",  
+        #  "📍 Geoapify Leads", "📌 Foursquare"
+         ]
     )
 
     with tab_extractor:
