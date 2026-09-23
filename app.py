@@ -17,8 +17,6 @@ from src.components.url_validator import render_url_validator
 from src.components.lead_extractor_ui import render_lead_extractor
 from src.components.yelp_leads import render_yelp_leads
 from src.components.merchant_genius_ui import render_merchant_genius
-from src.components.geoapify_ui import render_geoapify_leads
-from src.components.foursquare_ui import render_foursquare_leads
 
 
 def main() -> None:
@@ -27,11 +25,9 @@ def main() -> None:
 
     render_header()
 
-    tab_extractor, tab_url_checker, tab_lead, tab_yelp, tab_mg, tab_geo, tab_fsq = st.tabs(
-        ["📧 Mail Extractor", "🔗 URL Validator", "🏢 Lead Extractor","🛒 Merchant Genius",
-         "🗺️ Local Leads",  
-        #  "📍 Geoapify Leads", "📌 Foursquare"
-         ]
+    tab_extractor, tab_url_checker, tab_lead, tab_mg, tab_yelp = st.tabs(
+        ["📧 Mail Extractor", "🔗 URL Validator", "🏢 Lead Extractor",
+         "🛒 Merchant Genius", "🗺️ Local Leads"]
     )
 
     with tab_extractor:
@@ -53,12 +49,6 @@ def main() -> None:
 
     with tab_mg:
         render_merchant_genius()
-
-    with tab_geo:
-        render_geoapify_leads()
-
-    with tab_fsq:
-        render_foursquare_leads()
 
 
 if __name__ == "__main__":
