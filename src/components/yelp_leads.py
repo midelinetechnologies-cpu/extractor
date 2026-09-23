@@ -8,17 +8,17 @@ from src.core.yelp_api import search_businesses, parse_results
 from src.utils.exporters import clipboard_html
 
 
-def _init_yelp_state() -> None:
-    if "yelp_results" not in st.session_state:
-        st.session_state.yelp_results = []
-    if "yelp_total" not in st.session_state:
-        st.session_state.yelp_total = 0
-    if "yelp_pending" not in st.session_state:
-        st.session_state.yelp_pending = False
+def _init_state() -> None:
+    if "osm_results" not in st.session_state:
+        st.session_state.osm_results = []
+    if "osm_total" not in st.session_state:
+        st.session_state.osm_total = 0
+    if "osm_pending" not in st.session_state:
+        st.session_state.osm_pending = False
 
 
 def _request_search() -> None:
-    st.session_state.yelp_pending = True
+    st.session_state.osm_pending = True
 
 
 def _results_to_df(results: list[dict]) -> pd.DataFrame:
@@ -26,8 +26,8 @@ def _results_to_df(results: list[dict]) -> pd.DataFrame:
         return pd.DataFrame()
     df = pd.DataFrame(results)
     col_order = [
-        "name", "phone", "categories", "rating", "review_count",
-        "address", "city", "state", "zip_code", "website", "url",
+        "name", "phone", "email", "website", "categories",
+        "address", "city", "state", "zip_code", "url",
     ]
     existing = [c for c in col_order if c in df.columns]
     return df[existing]
@@ -35,13 +35,14 @@ def _results_to_df(results: list[dict]) -> pd.DataFrame:
 
 def _render_summary(results: list[dict], total: int) -> None:
     with_phone = sum(1 for r in results if r.get("phone"))
-    avg_rating = sum(r.get("rating", 0) for r in results) / len(results) if results else 0
+    with_email = sum(1 for r in results if r.get("email"))
+    with_website = sum(1 for r in results if r.get("website"))
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Showing", len(results))
-    c2.metric("Total on Yelp", total)
-    c3.metric("With Phone", with_phone)
-    c4.metric("Avg Rating", f"{avg_rating:.1f}")
+    c1.metric("Total Found", total)
+    c2.metric("With Phone", with_phone)
+    c3.metric("With Email", with_email)
+    c4.metric("With Website", with_website)
 
 
 def _render_export(df: pd.DataFrame) -> None:
@@ -52,101 +53,159 @@ def _render_export(df: pd.DataFrame) -> None:
 
     with copy_col:
         components.html(
-            clipboard_html(tsv_text, btn_id="copy_yelp"),
+            clipboard_html(tsv_text, btn_id="copy_osm"),
             height=52,
         )
     with csv_col:
         st.download_button(
             "Download CSV",
             data=csv_bytes,
-            file_name=f"yelp_leads_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            file_name=f"osm_leads_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
             use_container_width=True,
-            key="yelp_dl_csv",
+            key="osm_dl_csv",
         )
     with xl_col:
         buf = io.BytesIO()
         with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="Yelp Leads")
-            ws = writer.sheets["Yelp Leads"]
+            df.to_excel(writer, index=False, sheet_name="OSM Leads")
+            ws = writer.sheets["OSM Leads"]
             for col in ws.columns:
                 max_len = max((len(str(c.value)) if c.value else 0) for c in col)
                 ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 70)
         st.download_button(
             "Download Excel",
             data=buf.getvalue(),
-            file_name=f"yelp_leads_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            file_name=f"osm_leads_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
-            key="yelp_dl_xlsx",
+            key="osm_dl_xlsx",
         )
 
 
 def render_yelp_leads() -> None:
-    _init_yelp_state()
+    _init_state()
 
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown("#### Yelp Business Search")
-    st.caption("Search Yelp for local businesses by location and type. No API key needed.")
+    st.markdown("#### Local Business Search (OpenStreetMap)")
+    st.caption("Find businesses by location and type using free OpenStreetMap data. No API key needed.")
+
+    _LOCATIONS = [
+        "",
+        # India
+        "Delhi, India", "Mumbai, India", "Bangalore, India", "Hyderabad, India",
+        "Chennai, India", "Kolkata, India", "Pune, India", "Ahmedabad, India",
+        "Jaipur, India", "Lucknow, India", "Chandigarh, India", "Indore, India",
+        "Nagpur, India", "Surat, India", "Kochi, India", "Bhopal, India",
+        # USA
+        "New York, NY", "Los Angeles, CA", "Chicago, IL", "Houston, TX",
+        "Austin, TX", "San Francisco, CA", "Miami, FL", "Seattle, WA",
+        "Denver, CO", "Boston, MA", "Dallas, TX", "Atlanta, GA",
+        # UK
+        "London, UK", "Manchester, UK", "Birmingham, UK",
+        # Other
+        "Toronto, Canada", "Sydney, Australia", "Dubai, UAE", "Singapore",
+    ]
+
+    _BUSINESS_TYPES = [
+        "",
+        "Restaurant", "Cafe", "Coffee Shop", "Bar",
+        "Doctor", "Dentist", "Chiropractor", "Veterinary",
+        "Plumber", "Electrician", "Car Repair", "Mechanic",
+        "Lawyer", "Attorney", "Accountant", "Insurance", "Real Estate",
+        "Hair Salon", "Barber", "Nail Salon", "Spa",
+        "Gym", "Hotel",
+        "Bakery", "Florist", "Butcher",
+        "Laundry", "Pet Grooming",
+    ]
 
     col_loc, col_type = st.columns(2)
     with col_loc:
-        location = st.text_input(
+        selected_loc = st.selectbox(
             "Location",
-            placeholder="New York, NY  or  90210  or  Chicago, IL",
-            key="yelp_location",
+            _LOCATIONS,
+            format_func=lambda x: x if x else "— Select a location —",
+            key="osm_location_select",
         )
-    with col_type:
-        term = st.text_input(
-            "Business Type",
-            placeholder="plumber, restaurant, dentist, lawyer ...",
-            key="yelp_term",
+        custom_loc = st.text_input(
+            "Or type a custom location",
+            placeholder="e.g. Coimbatore, India",
+            key="osm_location_custom",
         )
+        location = custom_loc.strip() if custom_loc.strip() else selected_loc
 
-    col_limit, _ = st.columns([1, 3])
+    with col_type:
+        selected_type = st.selectbox(
+            "Business Type",
+            _BUSINESS_TYPES,
+            format_func=lambda x: x if x else "— Select a type —",
+            key="osm_term_select",
+        )
+        custom_type = st.text_input(
+            "Or type a custom business type",
+            placeholder="e.g. pharmacy, tailor",
+            key="osm_term_custom",
+        )
+        term = custom_type.strip() if custom_type.strip() else selected_type
+
+    col_limit, col_contact, _ = st.columns([1, 1, 2])
     with col_limit:
-        limit = st.selectbox("Results", [10, 20, 30, 50], index=1, key="yelp_limit")
+        limit = st.selectbox("Max Results", [10, 20, 50, 100], index=1, key="osm_limit")
+    with col_contact:
+        contact_only = st.checkbox("Only with contact info", value=True, key="osm_contact_only")
 
     st.button(
-        "Search Yelp",
+        "Search Businesses",
         type="primary",
         use_container_width=True,
-        key="yelp_search_btn",
+        key="osm_search_btn",
         on_click=_request_search,
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    if st.session_state.yelp_pending:
-        st.session_state.yelp_pending = False
+    if st.session_state.osm_pending:
+        st.session_state.osm_pending = False
         if not location:
             st.warning("Please enter a location.")
+        elif not term or not term.strip():
+            st.warning("Please enter a business type (e.g. plumber, restaurant).")
         else:
-            progress = st.progress(0, text="Searching Yelp...")
+            progress = st.progress(0, text="Searching OpenStreetMap...")
 
             def _update(done, total):
-                progress.progress(done / total, text=f"Found {done}/{total} businesses...")
+                pct = min(done / total, 1.0) if total > 0 else 0
+                progress.progress(pct, text=f"Found {done}/{total} businesses...")
 
             try:
                 data = search_businesses(
                     location=location,
                     term=term,
                     limit=limit,
+                    with_contact_only=contact_only,
                     progress_callback=_update,
                 )
                 progress.empty()
-                st.session_state.yelp_results = parse_results(data)
-                st.session_state.yelp_total = data.get("total", 0)
+
+                if data.get("error"):
+                    st.error(data["error"])
+                    return
+
+                st.session_state.osm_results = parse_results(data)
+                st.session_state.osm_total = data.get("total", 0)
+
+                if not st.session_state.osm_results:
+                    st.info("No businesses found. Try a broader location or different search term.")
             except Exception as e:
                 progress.empty()
-                st.error(f"Yelp search error: {e}")
+                st.error(f"Search error: {e}")
                 return
 
-    if st.session_state.yelp_results:
-        results = st.session_state.yelp_results
+    if st.session_state.osm_results:
+        results = st.session_state.osm_results
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown("#### Summary")
-        _render_summary(results, st.session_state.yelp_total)
+        _render_summary(results, st.session_state.osm_total)
         st.markdown("</div>", unsafe_allow_html=True)
 
         df = _results_to_df(results)
