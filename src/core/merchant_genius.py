@@ -44,6 +44,23 @@ def scrape_date_page(
 def _parse_listing_page(soup: BeautifulSoup) -> list[dict]:
     rows = []
 
+    containers = soup.select("div.blogContainer")
+    if containers:
+        by_domain: dict[str, dict] = {}
+        for c in containers:
+            biz = _parse_blog_container(c)
+            if not biz.get("domain"):
+                continue
+            existing = by_domain.get(biz["domain"])
+            if existing is None:
+                by_domain[biz["domain"]] = biz
+                rows.append(biz)
+            else:
+                for k, v in biz.items():
+                    if v and not existing.get(k):
+                        existing[k] = v
+        return rows
+
     cards = soup.select("div.card, div.store-card, div.shop-card")
     if not cards:
         cards = soup.select("div.col-md-6, div.col-lg-4, div.col-md-4")
@@ -59,6 +76,79 @@ def _parse_listing_page(soup: BeautifulSoup) -> list[dict]:
         rows = _fallback_text_parse(soup)
 
     return rows
+
+
+def _icon_text(card, icon: str) -> str:
+    """Text that follows an <img src='/{icon}.png'> marker in a card footer."""
+    img = card.find("img", src=re.compile(rf"/{icon}\.png$"))
+    if not img:
+        return ""
+    parts = []
+    for sib in img.next_siblings:
+        if getattr(sib, "name", None) in ("img", "br"):
+            break
+        parts.append(sib.get_text(" ") if hasattr(sib, "get_text") else str(sib))
+    return " ".join("".join(parts).split())
+
+
+def _parse_blog_container(card) -> dict:
+    name = ""
+    domain = ""
+    detail_url = ""
+    description = ""
+    currency = (card.get("data-currency") or "").strip()
+    language = (card.get("data-language") or "").strip()
+
+    link = card.find("a", href=re.compile(r"/shop/url/"))
+    if link:
+        href = link.get("href", "")
+        detail_url = _BASE + href if href.startswith("/") else href
+        domain = href.split("/shop/url/")[-1]
+
+    h2 = card.find("h2")
+    if h2:
+        type_span = h2.find("span", class_="typeText")
+        if type_span:
+            domain = domain or type_span.get_text(strip=True)
+        for s in h2.strings:
+            text = s.strip()
+            if text and text != domain:
+                name = text
+                break
+        br = (h2.find_parent("a") or h2).find_next_sibling("br")
+        if br:
+            nxt = br.next_sibling
+            desc_text = nxt.get_text(strip=True) if hasattr(nxt, "get_text") else str(nxt or "").strip()
+            if desc_text and "no description" not in desc_text.lower():
+                description = desc_text[:300]
+
+    lang_match = re.search(r"\(\s*([A-Z]{3})\s*/\s*([^)]+?)\s*\)", card.get_text(" ", strip=True))
+    if lang_match:
+        currency = currency or lang_match.group(1)
+        language = lang_match.group(2)
+
+    email = ""
+    em = _EMAIL_RE.search(_icon_text(card, "email"))
+    if em:
+        email = em.group(0)
+
+    phone = ""
+    phone_text = _icon_text(card, "phone")
+    digits = re.sub(r"\D", "", phone_text)
+    if 7 <= len(digits) <= 15:
+        phone = phone_text
+
+    return {
+        "name": name or domain,
+        "domain": domain,
+        "email": email,
+        "phone": phone,
+        "currency": currency,
+        "language": language,
+        "description": description,
+        "detail_url": detail_url,
+        "platform": "Shopify",
+    }
 
 
 def _find_store_blocks(soup: BeautifulSoup) -> list:
